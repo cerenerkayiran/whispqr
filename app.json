@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "whispqr",
+    "slug": "whispqr",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.whispqr.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to scan QR codes for joining events."
+      }
+    },
+    "android": {
+      "package": "com.whispqr.app",
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-barcode-scanner",
+        {
+          "cameraPermission": "Allow whispqr to access camera to scan event QR codes."
+        }
+      ]
+    ],
+    "scheme": "whispqr"
+  }
+} 
