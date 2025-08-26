@@ -146,11 +146,10 @@ const GuestMessageScreen = ({ navigation, route }) => {
       <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.successContainer}>
           <Card style={styles.successCard} backgroundColor={colors.surface}>
-            <Text style={styles.successTitle}>Message Sent!</Text>
+            <Text style={styles.successTitle}>Whisper Delivered!</Text>
             <Text style={styles.successDescription}>
-              Your anonymous message has been delivered to the event host
-              {event?.allowPublicMessages && messageData.isPublic ? ' and is now visible to other attendees' : ''}.
-            </Text>
+            Your undercover message has infiltrated the host’s inbox
+            {event?.allowPublicMessages && messageData.isPublic ? ' and is now causing a stir among attendees' : ''}.          </Text>
             
             <View style={styles.successButtons}>
               <Button
@@ -225,7 +224,7 @@ const GuestMessageScreen = ({ navigation, route }) => {
             {/* Message Content */}
             <Input
               label="Your Message *"
-              placeholder="Share your thoughts, questions, or feedback..."
+              placeholder="Share your thoughts, there will be no consequences."
               value={messageData.content}
               onChangeText={(value) => handleInputChange('content', value)}
               multiline
@@ -244,14 +243,14 @@ const GuestMessageScreen = ({ navigation, route }) => {
 
                 <View style={styles.privacyOptions}>
                   <Button
-                    title="📢 Public (Everyone)"
+                    title="Public (Everyone)"
                     variant={messageData.isPublic ? 'primary' : 'outline'}
                     size="small"
                     onPress={() => handleInputChange('isPublic', true)}
                     style={styles.privacyButton}
                   />
                   <Button
-                    title="🔒 Private (Host Only)"
+                    title="Private (Host Only)"
                     variant={!messageData.isPublic ? 'primary' : 'outline'}
                     size="small"
                     onPress={() => handleInputChange('isPublic', false)}
@@ -285,24 +284,23 @@ const GuestMessageScreen = ({ navigation, route }) => {
               />
               
               {event?.allowPublicMessages && (
-                <Button
-                  title="View Messages"
-                  variant="outline"
-                  onPress={() => navigation.navigate('MessageView', { 
-                    eventId: eventId, 
-                    eventName: event.name,
-                    isGuest: true 
-                  })}
-                  style={styles.viewMessagesButton}
-                />
+                              <Button
+                title="View Messages"
+                variant="secondary"
+                onPress={() => navigation.navigate('MessageView', { 
+                  eventId: eventId, 
+                  eventName: event.name,
+                  isGuest: true 
+                })}
+                style={styles.viewMessagesButton}
+              />
               )}
             </View>
 
             {/* Anonymous Notice */}
             <View style={styles.anonymousNotice}>
               <Text style={styles.anonymousText}>
-                🔒 Your message is completely anonymous. No personal information is collected or stored.
-              </Text>
+              Your message is completely private and anonymous, seriously, zero logs.              </Text>
             </View>
           </Card>
         </ScrollView>

@@ -2,11 +2,12 @@
 // Handles QR code scanning and validation for anonymous event access
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 import { parseEventUrl, isValidEventId, parseStringCode } from '../utils/qrCode';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import Input from '../components/Input';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../utils/theme';
 
 const QRScannerScreen = ({ navigation }) => {
@@ -162,21 +163,22 @@ const QRScannerScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {!isManualMode ? (
-        <>
-          <BarCodeScanner
-            onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-            style={styles.scanner}
-            barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
-          />
-          
-          {/* Scanner Overlay */}
-          <View style={styles.overlay}>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        {!isManualMode ? (
+          <>
+            <BarCodeScanner
+              onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+              style={styles.scanner}
+              barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+            />
+            
+            {/* Scanner Overlay */}
+            <View style={styles.overlay}>
             <View style={styles.overlayTop}>
               <Text style={styles.instructionTitle}>Scan QR Code</Text>
               <Text style={styles.instructionText}>
-                Point your camera at the whispqr event QR code to join
+                Point your camera at the event QR code to join anonymously
               </Text>
             </View>
 
@@ -187,23 +189,23 @@ const QRScannerScreen = ({ navigation }) => {
                 <View style={[styles.corner, styles.bottomLeft]} />
                 <View style={[styles.corner, styles.bottomRight]} />
               </View>
+              <View style={styles.scanLine} />
             </View>
 
             <View style={styles.overlayBottom}>
               {error ? (
-                <Card style={styles.errorCard} backgroundColor={colors.error}>
+                <Card style={styles.errorCard}>
                   <Text style={styles.errorText}>{error}</Text>
                   <Button
                     title="Try Again"
-                    variant="outline"
+                    variant="secondary"
                     size="small"
                     onPress={handleRetry}
                     style={styles.retryButton}
-                    textStyle={{ color: colors.textOnPrimary }}
                   />
                 </Card>
               ) : isProcessing ? (
-                <Card style={styles.processingCard} backgroundColor={colors.primary}>
+                <Card style={styles.processingCard}>
                   <Text style={styles.processingText}>Processing QR Code...</Text>
                 </Card>
               ) : (
@@ -215,17 +217,15 @@ const QRScannerScreen = ({ navigation }) => {
               <View style={styles.bottomButtons}>
                 <Button
                   title="Enter Code Manually"
-                  variant="ghost"
+                  variant="secondary"
                   onPress={() => setIsManualMode(true)}
                   style={styles.manualButton}
-                  textStyle={{ color: colors.textOnPrimary }}
                 />
                 <Button
                   title="Cancel"
                   variant="ghost"
                   onPress={() => navigation.goBack()}
                   style={styles.cancelButton}
-                  textStyle={{ color: colors.textOnPrimary }}
                 />
               </View>
             </View>
@@ -234,27 +234,34 @@ const QRScannerScreen = ({ navigation }) => {
       ) : (
         /* Manual Code Entry Mode */
         <View style={styles.manualContainer}>
-          <View style={styles.manualHeader}>
-            <Text style={styles.instructionTitle}>Enter Event Code</Text>
-            <Text style={styles.instructionText}>
-              Type the 6-character code or event ID to join
-            </Text>
-          </View>
+          <View style={styles.manualContent}>
+            <View style={styles.manualHeader}>
+              <Text style={styles.manualTitle}>Enter Event Code</Text>
+              <Text style={styles.manualSubtitle}>
+               Pop in the code and join incognito!
+              </Text>
+            </View>
 
-          <Card style={styles.manualForm}>
-            <TextInput
-              style={styles.codeInput}
+          <Card style={styles.formCard}>
+            {/* Guest Cat Illustration */}
+            <View style={styles.illustrationContainer}>
+              <Image
+                source={require('../assets/images/guestcat.jpg')}
+                style={styles.guestCatImage}
+                resizeMode="contain"
+              />
+            </View>
+            
+            <Input
               placeholder="Enter code (e.g., ABC123)"
               value={manualCode}
               onChangeText={setManualCode}
               autoCapitalize="characters"
               autoCorrect={false}
               maxLength={20}
+              style={styles.codeInput}
+              error={error}
             />
-
-            {error ? (
-              <Text style={styles.manualErrorText}>{error}</Text>
-            ) : null}
 
             <View style={styles.manualButtons}>
               <Button
@@ -265,63 +272,78 @@ const QRScannerScreen = ({ navigation }) => {
                 disabled={isProcessing || !manualCode.trim()}
                 style={styles.joinButton}
               />
-              <Button
-                title="Scan QR Code Instead"
-                variant="outline"
-                onPress={() => {
-                  setIsManualMode(false);
-                  resetScanner();
-                }}
-                style={styles.scanButton}
-              />
-              <Button
-                title="Cancel"
-                variant="ghost"
-                onPress={() => navigation.goBack()}
-                style={styles.cancelButton}
-              />
+              
+              <View style={styles.secondaryButtons}>
+                <Button
+                  title="Scan QR Code"
+                  variant="secondary"
+                  onPress={() => {
+                    setIsManualMode(false);
+                    resetScanner();
+                  }}
+                  style={styles.scanButton}
+                />
+                <Button
+                  title="Cancel"
+                  variant="ghost"
+                  onPress={() => navigation.goBack()}
+                  style={styles.cancelButton}
+                />
+              </View>
             </View>
           </Card>
+          </View>
         </View>
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.textPrimary,
+    backgroundColor: '#000000',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   scanner: {
     flex: 1,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   overlayTop: {
     alignItems: 'center',
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.xxl * 1.5,
     paddingHorizontal: spacing.lg,
   },
   instructionTitle: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
-    color: colors.textOnPrimary,
+    color: colors.background,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   instructionText: {
     fontSize: fontSize.md,
-    color: colors.textOnPrimary,
+    color: colors.background,
     textAlign: 'center',
     opacity: 0.9,
+    lineHeight: 22,
   },
   scannerFrame: {
-    width: 250,
-    height: 250,
+    width: 280,
+    height: 280,
     position: 'relative',
   },
   scannerCorners: {
@@ -330,38 +352,52 @@ const styles = StyleSheet.create({
   },
   corner: {
     position: 'absolute',
-    width: 30,
-    height: 30,
-    borderColor: colors.accent,
-    borderWidth: 3,
+    width: 40,
+    height: 40,
+    borderColor: colors.primary,
+    borderWidth: 4,
   },
   topLeft: {
     top: 0,
     left: 0,
     borderBottomWidth: 0,
     borderRightWidth: 0,
+    borderTopLeftRadius: 8,
   },
   topRight: {
     top: 0,
     right: 0,
     borderBottomWidth: 0,
     borderLeftWidth: 0,
+    borderTopRightRadius: 8,
   },
   bottomLeft: {
     bottom: 0,
     left: 0,
     borderTopWidth: 0,
     borderRightWidth: 0,
+    borderBottomLeftRadius: 8,
   },
   bottomRight: {
     bottom: 0,
     right: 0,
     borderTopWidth: 0,
     borderLeftWidth: 0,
+    borderBottomRightRadius: 8,
+  },
+  scanLine: {
+    position: 'absolute',
+    top: '50%',
+    left: 20,
+    right: 20,
+    height: 3,
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+    opacity: 0.8,
   },
   overlayBottom: {
     alignItems: 'center',
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xxl * 1.5,
     paddingHorizontal: spacing.lg,
     width: '100%',
   },
@@ -369,38 +405,50 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 320,
+    backgroundColor: colors.background,
   },
   errorText: {
     fontSize: fontSize.sm,
-    color: colors.textOnPrimary,
+    color: colors.error,
     textAlign: 'center',
     marginBottom: spacing.md,
     lineHeight: 20,
   },
   retryButton: {
-    minWidth: 100,
-    borderColor: colors.textOnPrimary,
+    minWidth: 120,
   },
   processingCard: {
     marginBottom: spacing.lg,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 320,
+    backgroundColor: colors.background,
   },
   processingText: {
     fontSize: fontSize.sm,
-    color: colors.textOnPrimary,
+    color: colors.primary,
     textAlign: 'center',
     lineHeight: 20,
   },
   helpText: {
     fontSize: fontSize.sm,
-    color: colors.textOnPrimary,
+    color: colors.background,
     textAlign: 'center',
     opacity: 0.8,
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.md,
+    lineHeight: 20,
+  },
+  bottomButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    width: '100%',
+    marginTop: spacing.md,
+    gap: spacing.md,
+  },
+  manualButton: {
+    minWidth: 140,
   },
   cancelButton: {
     minWidth: 100,
@@ -418,7 +466,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   permissionTitle: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
@@ -435,59 +483,67 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     minWidth: 200,
   },
-  bottomButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginTop: spacing.md,
-  },
-  manualButton: {
-    minWidth: 150,
-  },
   manualContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: colors.background,
+  },
+  manualContent: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
   },
   manualHeader: {
     alignItems: 'center',
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
   },
-  manualForm: {
-    width: '100%',
-    maxWidth: 350,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
-  },
-  codeInput: {
-    fontSize: fontSize.lg,
+  manualTitle: {
+    fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
-    backgroundColor: colors.inputBackground,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
-  manualErrorText: {
-    fontSize: fontSize.sm,
-    color: colors.error,
+  manualSubtitle: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    lineHeight: 22,
+  },
+  formCard: {
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+    marginHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
+  illustrationContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  guestCatImage: {
+    width: 200,
+    height: 200,
+    borderRadius: borderRadius.lg,
+  },
+  codeInput: {
+    marginBottom: spacing.lg,
   },
   manualButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
     width: '100%',
-    marginTop: spacing.md,
     gap: spacing.md,
   },
   joinButton: {
-    flex: 1,
+    marginBottom: spacing.md,
+  },
+  secondaryButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
   },
   scanButton: {
     flex: 1,
