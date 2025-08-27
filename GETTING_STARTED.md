@@ -1,6 +1,6 @@
 # Quick Start Guide for whispqr Expo App
 
-## Setup (5 minutes)
+## Setup
 
 ### 1. Install Dependencies
 ```bash

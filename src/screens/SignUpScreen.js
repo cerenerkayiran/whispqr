@@ -176,6 +176,7 @@ const SignUpScreen = ({ navigation }) => {
               onChangeText={(value) => handleInputChange('password', value)}
               error={errors.password}
               secureTextEntry
+              autoComplete="new-password"
               helperText="Must be at least 6 characters with uppercase and lowercase letters"
             />
 
@@ -187,6 +188,7 @@ const SignUpScreen = ({ navigation }) => {
               onChangeText={(value) => handleInputChange('confirmPassword', value)}
               error={errors.confirmPassword}
               secureTextEntry
+              autoComplete="new-password"
             />
 
             {/* Terms and Privacy - Basic notice */}

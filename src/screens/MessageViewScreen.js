@@ -183,11 +183,7 @@ const MessageViewScreen = ({ navigation, route }) => {
               <Text style={styles.messageContent}>{item.content}</Text>
             </View>
             
-            {item.isPublic && isGuest && (
-              <View style={styles.guestIndicator}>
-                <Text style={styles.guestIndicatorText}>Anonymous message</Text>
-              </View>
-            )}
+
           </Card>
         </Animated.View>
       </View>
@@ -465,19 +461,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     letterSpacing: 0.2,
   },
-  guestIndicator: {
-    marginTop: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  guestIndicatorText: {
-    fontSize: fontSize.xs,
-    color: colors.textLight,
-    fontStyle: 'italic',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,

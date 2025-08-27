@@ -37,9 +37,7 @@ import TestQRScannerScreen from './src/screens/TestQRScannerScreen';
 // Create navigation stack
 const Stack = createStackNavigator();
 
-// Navigation and authentication setup is now handled by AuthProvider
 
-// Loading component with modern pastel design
 const LoadingScreen = () => (
   <View style={{
     flex: 1,

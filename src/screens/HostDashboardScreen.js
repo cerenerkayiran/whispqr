@@ -104,7 +104,7 @@ const HostDashboardScreen = ({ navigation }) => {
   const handleDeleteEvent = async (eventId, eventName) => {
     Alert.alert(
       'Delete Expired Event',
-      `Are you sure you want to delete "${eventName}"? This action cannot be undone.`,
+      `Really destroy '${eventName}'? It won’t haunt anyone afterward.`,
       [
         {
           text: 'Cancel',
@@ -629,21 +629,21 @@ const styles = StyleSheet.create({
   },
   expiredSectionTitle: {
     marginTop: spacing.xl,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
   },
   expiredSectionDescription: {
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.md,
   },
   expiredEventCard: {
-    opacity: 0.7,
-    backgroundColor: colors.surfaceLight,
+    opacity: 0.9,
+    backgroundColor: colors.surface,
   },
   expiredEventTitle: {
-    color: colors.textSecondary,
+    color: colors.textPrimary,
   },
   expiredStatusBadge: {
     backgroundColor: colors.textLight,
@@ -652,13 +652,13 @@ const styles = StyleSheet.create({
     color: colors.textOnPrimary,
   },
   expiredEventDescription: {
-    color: colors.textSecondary,
+    color: colors.textPrimary,
   },
   expiredEventLocation: {
-    color: colors.textLight,
+    color: colors.textSecondary,
   },
   expiredMessageCount: {
-    color: colors.textSecondary,
+    color: colors.primary,
   },
   expiredEventFooter: {
     flexDirection: 'row',

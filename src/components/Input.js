@@ -44,8 +44,8 @@ const Input = ({
 
   // Get background color based on state
   const getBackgroundColor = () => {
-    if (!editable) return colors.surface; // Darker for non-editable (read-only)
-    return colors.surfaceLight; // Lighter for editable
+    if (!editable) return colors.surface; 
+    return colors.surfaceLight; 
   };
 
   return (
@@ -71,7 +71,7 @@ const Input = ({
         isFocused && shadows.sm,
         multiline && { 
           height: numberOfLines * 24 + spacing.md * 2,
-          alignItems: 'flex-start' // Align content to top for multiline
+          alignItems: 'flex-start' 
         },
         style,
       ]}>
@@ -141,14 +141,14 @@ const Input = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.lg, // Increased from spacing.md for more space between inputs
+    marginBottom: spacing.lg, 
   },
   label: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
-    paddingLeft: spacing.md, // Align with input text padding
+    paddingLeft: spacing.md, 
   },
   inputContainer: {
     flexDirection: 'row',
