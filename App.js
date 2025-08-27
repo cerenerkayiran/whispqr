@@ -31,8 +31,8 @@ import QRScannerScreen from './src/screens/QRScannerScreen';
 import GuestMessageScreen from './src/screens/GuestMessageScreen';
 import MessageViewScreen from './src/screens/MessageViewScreen';
 import ProfileSettingsScreen from './src/screens/ProfileSettingsScreen';
-import TestQRScreen from './src/screens/TestQRScreen';
-import TestQRScannerScreen from './src/screens/TestQRScannerScreen';
+
+
 
 // Create navigation stack
 const Stack = createStackNavigator();
@@ -114,17 +114,26 @@ const AppNavigator = () => {
                 <Stack.Screen 
                   name="CreateEvent" 
                   component={CreateEventScreen}
-                  options={{ title: 'Create Event' }}
+                  options={{ 
+                    title: 'Create Event',
+                    headerBackTitleVisible: false,
+                  }}
                 />
                 <Stack.Screen 
                   name="EventDetails" 
                   component={EventDetailsScreen}
-                  options={{ title: 'Event Details' }}
+                  options={{ 
+                    title: 'Event Details',
+                    headerBackTitleVisible: false,
+                  }}
                 />
                 <Stack.Screen 
                   name="ProfileSettings" 
                   component={ProfileSettingsScreen}
-                  options={{ title: 'Profile Settings' }}
+                  options={{ 
+                    title: 'Profile Settings',
+                    headerBackTitleVisible: false,
+                  }}
                 />
               </>
             ) : (
@@ -143,12 +152,18 @@ const AppNavigator = () => {
                 <Stack.Screen 
                   name="Login" 
                   component={LoginScreen}
-                  options={{ title: 'Host Login' }}
+                  options={{ 
+                    title: 'Host Login',
+                    headerBackTitleVisible: false,
+                  }}
                 />
                 <Stack.Screen 
                   name="SignUp" 
                   component={SignUpScreen}
-                  options={{ title: 'Create Host Account' }}
+                  options={{ 
+                    title: 'Create Host Account',
+                    headerBackTitleVisible: false,
+                  }}
                 />
               </>
             )}
@@ -178,19 +193,8 @@ const AppNavigator = () => {
                 headerBackTitleVisible: false,
               }}
             />
-            <Stack.Screen 
-              name="TestQR" 
-              component={TestQRScreen}
-              options={{ 
-                title: 'Test QR Code',
-                unmountOnBlur: true
-              }}
-            />
-            <Stack.Screen 
-              name="TestQRScanner" 
-              component={TestQRScannerScreen}
-              options={{ title: 'Test QR Scanner' }}
-            />
+
+
           </Stack.Navigator>
         </NavigationContainer>
     </>

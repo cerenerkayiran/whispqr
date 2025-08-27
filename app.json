@@ -23,12 +23,15 @@
     },
     "plugins": [
       [
-        "expo-barcode-scanner",
+        "expo-camera",
         {
-          "cameraPermission": "Allow whispqr to access camera to scan event QR codes."
+          "cameraPermission": "Allow whispqr to access camera to scan event QR codes.",
+          "microphonePermission": "Allow whispqr to access your microphone",
+          "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-font"
     ],
     "scheme": "whispqr"
   }
-} 
+}

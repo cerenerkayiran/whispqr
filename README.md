@@ -28,7 +28,7 @@ whispqr creates a safe space for anonymous feedback and messages at events. Host
 - **Navigation**: React Navigation 6 with stack navigator
 - **Authentication**: Firebase Auth for host accounts
 - **Database**: Firebase Firestore with real-time updates
-- **QR Handling**: expo-barcode-scanner and react-native-qrcode-svg
+- **QR Handling**: expo-camera and react-native-qrcode-svg
 - **Animations**: Custom split-text and typewriter components
 - **State Management**: React Context API with custom hooks
 - **Styling**: Custom theme system with design tokens

@@ -1,10 +1,10 @@
 // Firebase configuration and initialization for Expo
 // Handles Firebase Auth and Firestore setup for whispqr app
 
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, initializeAuth, getReactNativePersistence, sendPasswordResetEmail } from 'firebase/auth';
+import { initializeApp, getApps } from 'firebase/app';
+import { initializeAuth, getReactNativePersistence, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, collection, addDoc, doc, getDoc, getDocs, query, where, orderBy, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { generateStringCode } from './qrCode';
 
 // Firebase configuration
@@ -17,13 +17,26 @@ const firebaseConfig = {
   appId: "1:856919905995:web:d1605235b73afff6702d4e"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase app
+let app;
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
 
-// Initialize Firebase services with persistence
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+// Initialize Auth with AsyncStorage persistence
+let auth;
+try {
+  auth = getAuth(app);
+} catch (error) {
+  // If getAuth fails, try initializeAuth
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+  });
+}
+
+// Initialize Firestore
 const db = getFirestore(app);
 
 // Export Firebase services

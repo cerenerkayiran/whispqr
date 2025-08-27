@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, Camera } from 'expo-camera';
+import { useFocusEffect } from '@react-navigation/native';
 import { parseEventUrl, isValidEventId, parseStringCode } from '../utils/qrCode';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -20,13 +21,20 @@ const QRScannerScreen = ({ navigation }) => {
 
   // Request camera permissions
   useEffect(() => {
-    const getBarCodeScannerPermissions = async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
+    const getCameraPermissions = async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
       setHasPermission(status === 'granted');
     };
 
-    getBarCodeScannerPermissions();
+    getCameraPermissions();
   }, []);
+
+  // Reset scanner state when screen comes back into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      resetScanner();
+    }, [])
+  );
 
   // Handle successful QR code scan
   const handleBarCodeScanned = async ({ type, data }) => {
@@ -38,8 +46,19 @@ const QRScannerScreen = ({ navigation }) => {
 
     try {
       console.log('Scanned QR Code:', data);
+      console.log('Attempting to parse as string code...');
 
-      // Parse the scanned URL to extract event ID
+      // First try to parse as string code (since QR codes contain string codes, not URLs)
+      const stringResult = await parseStringCode(data);
+      console.log('String code parse result:', stringResult);
+      
+      if (stringResult.success) {
+        console.log('Successfully parsed string code, navigating to GuestMessage');
+        navigation.navigate('GuestMessage', { eventId: stringResult.eventId });
+        return;
+      }
+
+      // If string code fails, try to parse as URL (fallback)
       const parseResult = parseEventUrl(data);
       
       if (!parseResult.success) {
@@ -167,10 +186,13 @@ const QRScannerScreen = ({ navigation }) => {
       <SafeAreaView style={styles.safeArea}>
         {!isManualMode ? (
           <>
-            <BarCodeScanner
-              onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+            <CameraView
               style={styles.scanner}
-              barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+              facing="back"
+              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+              barcodeScannerSettings={{
+                barcodeTypes: ["qr"],
+              }}
             />
             
             {/* Scanner Overlay */}
@@ -178,7 +200,7 @@ const QRScannerScreen = ({ navigation }) => {
             <View style={styles.overlayTop}>
               <Text style={styles.instructionTitle}>Scan QR Code</Text>
               <Text style={styles.instructionText}>
-                Point your camera at the event QR code to join anonymously
+              Aim, scan, and join - no names, just vibes
               </Text>
             </View>
 
@@ -210,7 +232,7 @@ const QRScannerScreen = ({ navigation }) => {
                 </Card>
               ) : (
                 <Text style={styles.helpText}>
-                  Make sure the QR code is fully visible and well-lit
+Your QR code deserves good lighting, treat it like a selfie
                 </Text>
               )}
 

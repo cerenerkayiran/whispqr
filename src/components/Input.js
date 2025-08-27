@@ -38,7 +38,6 @@ const Input = ({
   // Get border color based on state
   const getBorderColor = () => {
     if (error) return colors.error;
-    if (isFocused) return colors.primary;
     return colors.border;
   };
 
@@ -62,19 +61,18 @@ const Input = ({
       )}
 
       {/* Input Container */}
-      <View style={[
-        styles.inputContainer,
-        {
-          borderColor: getBorderColor(),
-          backgroundColor: getBackgroundColor(),
-        },
-        isFocused && shadows.sm,
-        multiline && { 
-          height: numberOfLines * 24 + spacing.md * 2,
-          alignItems: 'flex-start' 
-        },
-        style,
-      ]}>
+              <View style={[
+          styles.inputContainer,
+          {
+            borderColor: getBorderColor(),
+            backgroundColor: getBackgroundColor(),
+          },
+          multiline && { 
+            height: numberOfLines * 24 + spacing.md * 2,
+            alignItems: 'flex-start' 
+          },
+          style,
+        ]}>
         {/* Left Icon */}
         {leftIcon && (
           <View style={styles.leftIconContainer}>
@@ -102,9 +100,6 @@ const Input = ({
           numberOfLines={numberOfLines}
           maxLength={maxLength}
           editable={editable}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          showSoftInputOnFocus={false}
           {...props}
         />
 

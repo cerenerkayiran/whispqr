@@ -2,7 +2,8 @@
 // Shows list of events, provides navigation to create new events, and user management
 
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, RefreshControl, TouchableOpacity, Alert, Image, Animated, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, RefreshControl, TouchableOpacity, Alert, Image } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useAuth } from '../contexts/AuthContext';
 import { useEvents } from '../hooks/useFirestore';
 import Button from '../components/Button';
@@ -51,60 +52,88 @@ const HostDashboardScreen = ({ navigation }) => {
     }
   };
 
-  // Render event item
-  const renderEventItem = ({ item }) => (
-    <Card
-      style={styles.eventCard}
-      onPress={() => navigation.navigate('EventDetails', { eventId: item.id })}
-      shadowType="md"
-    >
-      <View style={styles.eventHeader}>
-        <View style={styles.eventTitleContainer}>
-          <Text style={styles.eventTitle} numberOfLines={2}>
-            {item.name || 'Unnamed Event'}
-          </Text>
-          {item.location && (
-            <Text style={styles.eventLocation} numberOfLines={1}>
-              at {item.location}
+  // Swipeable Active Event Card Component
+  const SwipeableActiveEventCard = ({ item }) => {
+    const swipeableRef = useRef(null);
+
+    const renderRightActions = () => (
+      <TouchableOpacity
+        style={styles.deleteAction}
+        onPress={() => {
+          handleDeleteEvent(item.id, item.name || 'Unnamed Event', true);
+          swipeableRef.current?.close();
+        }}
+      >
+        <Text style={styles.deleteActionText}>Delete</Text>
+      </TouchableOpacity>
+    );
+
+    return (
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        rightThreshold={40}
+        overshootRight={false}
+      >
+        <Card
+          style={styles.eventCard}
+          onPress={() => navigation.navigate('EventDetails', { eventId: item.id })}
+          shadowType="md"
+        >
+          <View style={styles.eventHeader}>
+            <View style={styles.eventTitleContainer}>
+              <Text style={styles.eventTitle} numberOfLines={2}>
+                {item.name || 'Unnamed Event'}
+              </Text>
+              {item.location && (
+                <Text style={styles.eventLocation} numberOfLines={1}>
+                  at {item.location}
+                </Text>
+              )}
+            </View>
+            <View style={[
+              styles.statusBadge,
+              { backgroundColor: item.isActive ? colors.success : colors.textLight }
+            ]}>
+              <Text style={[
+                styles.statusText,
+                { color: item.isActive ? colors.textOnPrimary : colors.textOnPrimary }
+              ]}>
+                {item.isActive ? 'Active' : 'Inactive'}
+              </Text>
+            </View>
+          </View>
+
+          {item.description && (
+            <Text style={styles.eventDescription} numberOfLines={2}>
+              {item.description}
             </Text>
           )}
-        </View>
-        <View style={[
-          styles.statusBadge,
-          { backgroundColor: item.isActive ? colors.success : colors.textLight }
-        ]}>
-          <Text style={[
-            styles.statusText,
-            { color: item.isActive ? colors.textOnPrimary : colors.textOnPrimary }
-          ]}>
-            {item.isActive ? 'Active' : 'Inactive'}
-          </Text>
-        </View>
-      </View>
 
-      {item.description && (
-        <Text style={styles.eventDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-      )}
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate('MessageView', { 
-          eventId: item.id, 
-          eventName: item.name 
-        })}
-        style={styles.messageCountContainer}
-      >
-        <Text style={styles.messageCount}>View Messages</Text>
-      </TouchableOpacity>
-    </Card>
-  );
+          <TouchableOpacity
+            onPress={() => navigation.navigate('MessageView', { 
+              eventId: item.id, 
+              eventName: item.name 
+            })}
+            style={styles.messageCountContainer}
+          >
+            <Text style={styles.messageCount}>View Messages</Text>
+          </TouchableOpacity>
+        </Card>
+      </Swipeable>
+    );
+  };
 
   // Render expired event item (read-only)
-  const handleDeleteEvent = async (eventId, eventName) => {
+  const handleDeleteEvent = async (eventId, eventName, isActive = false) => {
+    const alertTitle = isActive ? 'Delete Active Event' : 'Delete Expired Event';
+    const alertMessage = isActive 
+      ? `Really destroy "${eventName}"? It won't haunt anyone afterward.`
+      : `"${eventName}" had a good run. Shall we pull the plug?`;
+
     Alert.alert(
-      'Delete Expired Event',
-      `Really destroy '${eventName}'? It won’t haunt anyone afterward.`,
+      alertTitle,
+      alertMessage,
       [
         {
           text: 'Cancel',
@@ -134,101 +163,65 @@ const HostDashboardScreen = ({ navigation }) => {
     );
   };
 
-  // Swipeable Expired Event Card Component
+  // Simple Swipeable Expired Event Card Component
   const SwipeableExpiredEventCard = ({ item }) => {
-    const translateX = useRef(new Animated.Value(0)).current;
-    const opacity = useRef(new Animated.Value(1)).current;
+    const swipeableRef = useRef(null);
 
-    const panResponder = useRef(
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (evt, gestureState) => {
-          return Math.abs(gestureState.dx) > 20;
-        },
-        onPanResponderMove: (evt, gestureState) => {
-          if (gestureState.dx < 0) {
-            translateX.setValue(gestureState.dx);
-          }
-        },
-        onPanResponderRelease: (evt, gestureState) => {
-          if (gestureState.dx < -100) {
-            // Swipe far enough - delete with confirmation
-            Animated.parallel([
-              Animated.timing(translateX, {
-                toValue: -400,
-                duration: 300,
-                useNativeDriver: true,
-              }),
-              Animated.timing(opacity, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true,
-              })
-            ]).start(() => {
-              handleDeleteEvent(item.id, item.name || 'Unnamed Event');
-            });
-          } else {
-            // Snap back
-            Animated.spring(translateX, {
-              toValue: 0,
-              useNativeDriver: true,
-            }).start();
-          }
-        },
-      })
-    ).current;
+    const renderRightActions = () => (
+      <TouchableOpacity
+        style={styles.deleteAction}
+        onPress={() => {
+          handleDeleteEvent(item.id, item.name || 'Unnamed Event', false);
+          swipeableRef.current?.close();
+        }}
+      >
+        <Text style={styles.deleteActionText}>Delete</Text>
+      </TouchableOpacity>
+    );
 
     return (
-      <View style={styles.swipeContainer}>
-        <View style={styles.deleteBackground}>
-          <Text style={styles.deleteBackgroundText}>Delete</Text>
-        </View>
-        <Animated.View
-          style={[
-            styles.expiredEventCardContainer,
-            {
-              transform: [{ translateX }],
-              opacity,
-            },
-          ]}
-          {...panResponder.panHandlers}
-        >
-          <Card style={[styles.eventCard, styles.expiredEventCard]} shadowType="sm">
-            <View style={styles.eventHeader}>
-              <View style={styles.eventTitleContainer}>
-                <Text style={[styles.eventTitle, styles.expiredEventTitle]} numberOfLines={2}>
-                  {item.name || 'Unnamed Event'}
-                </Text>
-                {item.location && (
-                  <Text style={[styles.eventLocation, styles.expiredEventLocation]} numberOfLines={1}>
-                    at {item.location}
-                  </Text>
-                )}
-              </View>
-              <View style={[styles.statusBadge, styles.expiredStatusBadge]}>
-                <Text style={[styles.statusText, styles.expiredStatusText]}>
-                  Expired
-                </Text>
-              </View>
-            </View>
-
-            {item.description && (
-              <Text style={[styles.eventDescription, styles.expiredEventDescription]} numberOfLines={2}>
-                {item.description}
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        rightThreshold={40}
+        overshootRight={false}
+      >
+        <Card style={[styles.eventCard, styles.expiredEventCard]} shadowType="sm">
+          <View style={styles.eventHeader}>
+            <View style={styles.eventTitleContainer}>
+              <Text style={[styles.eventTitle, styles.expiredEventTitle]} numberOfLines={2}>
+                {item.name || 'Unnamed Event'}
               </Text>
-            )}
+              {item.location && (
+                <Text style={[styles.eventLocation, styles.expiredEventLocation]} numberOfLines={1}>
+                  at {item.location}
+                </Text>
+              )}
+            </View>
+            <View style={[styles.statusBadge, styles.expiredStatusBadge]}>
+              <Text style={[styles.statusText, styles.expiredStatusText]}>
+                Expired
+              </Text>
+            </View>
+          </View>
 
-            <TouchableOpacity
-              onPress={() => navigation.navigate('MessageView', { 
-                eventId: item.id, 
-                eventName: item.name 
-              })}
-              style={styles.messageCountContainer}
-            >
-              <Text style={[styles.messageCount, styles.expiredMessageCount]}>View Messages</Text>
-            </TouchableOpacity>
-          </Card>
-        </Animated.View>
-      </View>
+          {item.description && (
+            <Text style={[styles.eventDescription, styles.expiredEventDescription]} numberOfLines={2}>
+              {item.description}
+            </Text>
+          )}
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('MessageView', { 
+              eventId: item.id, 
+              eventName: item.name 
+            })}
+            style={styles.messageCountContainer}
+          >
+            <Text style={[styles.messageCount, styles.expiredMessageCount]}>View Messages</Text>
+          </TouchableOpacity>
+        </Card>
+      </Swipeable>
     );
   };
 
@@ -341,26 +334,19 @@ const HostDashboardScreen = ({ navigation }) => {
                   resizeMode="cover"
                 />
               </View>
+
+              {/* Create Event Button */}
+              <View style={styles.createEventSection}>
+                <Button
+                  title="Create Event"
+                  variant="primary"
+                  onPress={() => navigation.navigate('CreateEvent')}
+                  style={styles.createEventButton}
+                />
+              </View>
             </View>
 
-            {/* Create Event Button */}
-            <View style={styles.createEventSection}>
-              <Button
-                title="Create Event"
-                variant="primary"
-                onPress={() => navigation.navigate('CreateEvent')}
-                style={styles.createEventButton}
-              />
-            </View>
 
-            {/* Test Button - Remove this in production */}
-            <View style={styles.testSection}>
-              <Button
-                title="Open Test QR Screen"
-                onPress={() => navigation.navigate('TestQR')}
-                style={styles.testButton}
-              />
-            </View>
 
             {/* Events Content */}
             {error && !error.toLowerCase().includes('index') ? (
@@ -374,7 +360,7 @@ const HostDashboardScreen = ({ navigation }) => {
                   ) : (
                     events.map((item) => (
                       <View key={item.id} style={styles.eventItemWrapper}>
-                        {renderEventItem({ item })}
+                        <SwipeableActiveEventCard item={item} />
                       </View>
                     ))
                   )}
@@ -408,7 +394,7 @@ const HostDashboardScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#e6e1db',
   },
   heroBackground: {
     position: 'absolute',
@@ -435,7 +421,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderBottomLeftRadius: borderRadius.xl,
     borderBottomRightRadius: borderRadius.xl,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
   headerTop: {
     flexDirection: 'row',
@@ -491,7 +477,8 @@ const styles = StyleSheet.create({
   // Illustration Styles
   illustrationContainer: {
     alignItems: 'center',
-    marginTop: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
   },
   illustrationImage: {
     width: 320,
@@ -502,19 +489,14 @@ const styles = StyleSheet.create({
   // Action Button Styles
   createEventSection: {
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
   },
   createEventButton: {
     width: '100%',
     paddingVertical: spacing.md,
   },
-  testSection: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  testButton: {
-    width: '100%',
-  },
+
   
   // Events Content Styles
   eventsContent: {
@@ -531,6 +513,7 @@ const styles = StyleSheet.create({
   },
   eventCard: {
     marginBottom: spacing.md,
+    backgroundColor: '#f1f0e7',
   },
   eventHeader: {
     flexDirection: 'row',
@@ -640,7 +623,7 @@ const styles = StyleSheet.create({
   },
   expiredEventCard: {
     opacity: 0.9,
-    backgroundColor: colors.surface,
+    backgroundColor: '#f1f0e7',
   },
   expiredEventTitle: {
     color: colors.textPrimary,
@@ -700,6 +683,25 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     color: colors.textOnPrimary,
+  },
+  // New delete action styles
+  deleteAction: {
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '90%',
+    borderTopRightRadius: borderRadius.md,
+    borderBottomRightRadius: borderRadius.md,
+    borderTopLeftRadius: borderRadius.md,
+    borderBottomLeftRadius: borderRadius.md,
+  },
+  deleteActionText: {
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.bold,
+    fontSize: fontSize.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
 

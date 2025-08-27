@@ -3,9 +3,11 @@ import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, Clipboard, Share } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import QRCode from 'react-native-qrcode-svg';
-import { useEvent, useEvents } from '../hooks/useFirestore';
+import { useEvent } from '../hooks/useFirestore';
 import { useAuth } from '../contexts/AuthContext';
 import { generateStringCode } from '../utils/qrCode';
+import * as Sharing from 'expo-sharing';
+
 import Button from '../components/Button';
 import Card from '../components/Card';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../utils/theme';
@@ -15,7 +17,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
   const { eventId } = route.params;
   const { user } = useAuth();
   const { event, loading, error, refreshEvent } = useEvent(eventId);
-  const { deleteEvent } = useEvents(user?.uid);
+
   const [qrError, setQrError] = React.useState(false);
   const [qrRef, setQrRef] = React.useState(null);
   const qrContainerRef = React.useRef();
@@ -40,23 +42,48 @@ const EventDetailsScreen = ({ navigation, route }) => {
   // Share QR code as image
   const shareQRCode = async () => {
     try {
-      // Capture the QR code container as an image
-      const uri = await captureRef(qrContainerRef, {
+      console.log('Starting QR share...');
+      
+      if (!qrContainerRef.current) {
+        console.log('No QR container ref, sharing text instead');
+        return shareTextOnly();
+      }
+
+      // Wait for QR to render completely
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      console.log('Capturing QR code...');
+      
+      // Capture the QR container
+      const uri = await captureRef(qrContainerRef.current, {
         format: 'png',
         quality: 1.0,
+        result: 'tmpfile',
       });
-      
-      const shareOptions = {
-        title: `Join "${event?.name || 'Event'}" on whispqr`,
-        message: `Scan this QR code to join "${event?.name || 'Event'}" and leave anonymous messages!\n\nOr use code: ${generateStringCode(eventId)}`,
-        url: uri,
-      };
-      
-      await Share.share(shareOptions);
+
+      console.log('Captured at:', uri);
+
+      // Check if Sharing is available
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          dialogTitle: `QR Code for ${event?.name || 'Event'}`,
+        });
+      } else {
+        // Use React Native Share as fallback
+        const { Share } = require('react-native');
+        await Share.share({
+          url: uri,
+          title: `Join "${event?.name || 'Event'}" on whispqr`,
+        });
+      }
+
     } catch (error) {
-      console.error('QR sharing error:', error);
-      // Fallback to text sharing
-      shareTextOnly();
+      console.error('QR sharing failed:', error);
+      Alert.alert(
+        'Sharing Failed', 
+        'Could not share QR image. Sharing event code instead.',
+        [{ text: 'OK', onPress: shareTextOnly }]
+      );
     }
   };
 
@@ -73,41 +100,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
     });
   };
 
-  // Handle event deletion with confirmation
-  const handleDeleteEvent = () => {
-    Alert.alert(
-      'Delete Event',
-      `Are you sure you want to delete "${event?.name || 'this event'}"? This action cannot be undone.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = await deleteEvent(eventId);
-              if (result.success) {
-                Alert.alert('Success', 'Event deleted successfully', [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.navigate('HostDashboard'),
-                  },
-                ]);
-              } else {
-                Alert.alert('Error', result.error || 'Failed to delete event');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'An unexpected error occurred');
-              console.error('Delete event error:', error);
-            }
-          },
-        },
-      ]
-    );
-  };
+
 
   if (loading) {
     return (
@@ -219,8 +212,14 @@ const EventDetailsScreen = ({ navigation, route }) => {
                   ref={qrContainerRef}
                   style={{
                     backgroundColor: 'white',
-                    padding: spacing.md,
+                    padding: 20,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    width: 250,
+                    height: 250,
+                    justifyContent: 'center',
                   }}
+                  collapsable={false}
                 >
                   <QRCode
                     value={generateStringCode(eventId)}
@@ -240,7 +239,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          {/* Share Button - matching View Messages button structure */}
+          {/* Dashboard Actions */}
           <Card style={[styles.actionsSection, { marginTop: -spacing.xl }]}>
             <View style={styles.actionButtons}>
               <Button
@@ -249,6 +248,8 @@ const EventDetailsScreen = ({ navigation, route }) => {
                 onPress={shareQRCode}
                 style={styles.actionButton}
               />
+
+
             </View>
           </Card>
 
@@ -273,27 +274,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
           </View>
         </Card>
 
-        {/* Action Buttons */}
-        <Card style={styles.actionsSection}>
-          <Text style={[styles.sectionTitle, styles.manageEventTitle]}>Manage Event</Text>
-          <View style={styles.actionButtons}>
-            <Button
-              title="View Messages"
-              variant="primary"
-              onPress={() => navigation.navigate('MessageView', { 
-                eventId: eventId, 
-                eventName: event.name 
-              })}
-              style={styles.actionButton}
-            />
-            <Button
-              title="Delete Event"
-              variant="outline"
-              onPress={handleDeleteEvent}
-              style={[styles.actionButton, styles.deleteButton]}
-            />
-          </View>
-        </Card>
+
 
         {/* Instructions for Hosts */}
         <Card style={styles.instructionsSection} backgroundColor={colors.accent}>
@@ -309,7 +290,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
               3. They can leave anonymous messages immediately
             </Text>
             <Text style={styles.instructionItem}>
-              4. View and manage all messages from "View Messages"
+              4. Manage your event and view messages from the dashboard above
             </Text>
           </View>
         </Card>
@@ -423,9 +404,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     textAlign: 'center',
   },
-  manageEventTitle: {
-    marginBottom: spacing.lg,
-  },
+
   sectionDescription: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
@@ -545,14 +524,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   actionButtons: {
-    gap: spacing.md,
+    // Single button layout
   },
   actionButton: {
     width: '100%',
   },
-  deleteButton: {
-    borderColor: colors.primary,
-  },
+
   instructionsSection: {
     marginBottom: spacing.lg,
   },
