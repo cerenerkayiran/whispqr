@@ -103,11 +103,11 @@ const ProfileSettingsScreen = ({ navigation }) => {
               placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
-              style={styles.input}
+              style={styles.emailInput}
               editable={false} // Email changes might require re-authentication
             />
             <Text style={styles.inputNote}>
-            Changing emails? Patience… it’s coming soon.
+            Changing emails? Patience… it's coming soon.
             </Text>
           </View>
 
@@ -168,10 +168,14 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: spacing.xs,
   },
+  emailInput: {
+    marginBottom: 0, // No margin for email input with note
+  },
   inputNote: {
     fontSize: fontSize.xs,
     color: colors.textLight,
     fontStyle: 'italic',
+    marginTop: -spacing.xs, // Pull the note up closer to the input
   },
   saveButton: {
     marginTop: spacing.md,
@@ -182,10 +186,10 @@ const styles = StyleSheet.create({
   },
   signOutButton: {
     borderColor: colors.error,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.error,
   },
   signOutButtonText: {
-    color: colors.error,
+    color: colors.textOnPrimary,
   },
 });
 

@@ -1,8 +1,8 @@
 // Message View Screen - Real-time message management for hosts
 // Displays all messages with real-time updates and management options
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, RefreshControl, TouchableOpacity, Animated, PanResponder, Alert } from 'react-native';
 import { useMessages } from '../hooks/useFirestore';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -26,17 +26,34 @@ const MessageViewScreen = ({ navigation, route }) => {
 
   // Handle message deletion with user confirmation
   const handleDeleteMessage = async (messageId, messageContent) => {
-    // In a real app, you'd show a confirmation dialog here
-    // For now, we'll add a simple confirmation with a user feedback system [[memory:5180760]]
-    try {
-      const result = await deleteMessage(messageId);
-      if (!result.success) {
-        // Show error feedback in a professional way
-        console.error('Failed to delete message:', result.error);
-      }
-    } catch (error) {
-      console.error('Delete message error:', error);
-    }
+    const messagePreview = messageContent.length > 50 
+      ? messageContent.substring(0, 50) + '...' 
+      : messageContent;
+
+    Alert.alert(
+      'Obliterate this whisper?',
+      `Destroy evidence? Are you sure?\n\n"${messagePreview}"`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await deleteMessage(messageId);
+              if (!result.success) {
+                console.error('Failed to delete message:', result.error);
+              }
+            } catch (error) {
+              console.error('Delete message error:', error);
+            }
+          },
+        },
+      ],
+    );
   };
 
   // Format timestamp for display
@@ -79,43 +96,107 @@ const MessageViewScreen = ({ navigation, route }) => {
     }
   });
 
-  // Render message item
-  const renderMessageItem = ({ item }) => (
-    <Card style={styles.messageCard} shadowType="sm">
-      <View style={styles.messageHeader}>
-        <View style={styles.messageInfo}>
-          <View style={styles.messageMetadata}>
-            <Text style={styles.messageTime}>
-              {formatTimestamp(item.createdAt)}
-            </Text>
-            {!isGuest && (
-              <View style={[
-                styles.visibilityBadge,
-                { backgroundColor: item.isPublic ? colors.success : colors.secondary }
-              ]}>
-                <Text style={[
-                  styles.visibilityText,
-                  { color: colors.textPrimary }
-                ]}>
-                  {item.isPublic ? '📢 Public' : '🔒 Private'}
-                </Text>
+  // Swipeable Message Card Component
+  const SwipeableMessageCard = ({ item }) => {
+    const translateX = useRef(new Animated.Value(0)).current;
+    const opacity = useRef(new Animated.Value(1)).current;
+
+    const panResponder = useRef(
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (evt, gestureState) => {
+          return !isGuest && Math.abs(gestureState.dx) > 20;
+        },
+        onPanResponderMove: (evt, gestureState) => {
+          if (!isGuest && gestureState.dx < 0) {
+            translateX.setValue(gestureState.dx);
+          }
+        },
+        onPanResponderRelease: (evt, gestureState) => {
+          if (!isGuest) {
+            if (gestureState.dx < -100) {
+              // Swipe far enough - delete
+              Animated.parallel([
+                Animated.timing(translateX, {
+                  toValue: -400,
+                  duration: 300,
+                  useNativeDriver: true,
+                }),
+                Animated.timing(opacity, {
+                  toValue: 0,
+                  duration: 300,
+                  useNativeDriver: true,
+                })
+              ]).start(() => {
+                handleDeleteMessage(item.id, item.content);
+              });
+            } else {
+              // Snap back
+              Animated.spring(translateX, {
+                toValue: 0,
+                useNativeDriver: true,
+              }).start();
+            }
+          }
+        },
+      })
+    ).current;
+
+    return (
+      <View style={styles.swipeContainer}>
+        <View style={styles.deleteBackground}>
+          <Text style={styles.deleteBackgroundText}>Delete</Text>
+        </View>
+        <Animated.View
+          style={[
+            styles.messageCardContainer,
+            {
+              transform: [{ translateX }],
+              opacity,
+            },
+          ]}
+          {...(isGuest ? {} : panResponder.panHandlers)}
+        >
+          <Card style={styles.messageCard} shadowType="md">
+            <View style={styles.messageHeader}>
+              <View style={styles.messageInfo}>
+                <View style={styles.messageMetadata}>
+                  <View style={styles.timestampContainer}>
+                    <Text style={styles.messageTime}>
+                      {formatTimestamp(item.createdAt)}
+                    </Text>
+                  </View>
+                  {!isGuest && (
+                    <View style={[
+                      styles.visibilityBadge,
+                      item.isPublic ? styles.publicBadge : styles.privateBadge
+                    ]}>
+                      <Text style={styles.visibilityText}>
+                        {item.isPublic ? 'Public' : 'Private'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.messageContentContainer}>
+              <Text style={styles.messageContent}>{item.content}</Text>
+            </View>
+            
+            {item.isPublic && isGuest && (
+              <View style={styles.guestIndicator}>
+                <Text style={styles.guestIndicatorText}>Anonymous message</Text>
               </View>
             )}
-          </View>
-        </View>
-        
-        {!isGuest && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDeleteMessage(item.id, item.content)}
-          >
-            <Text style={styles.deleteButtonText}>🗑️</Text>
-          </TouchableOpacity>
-        )}
+          </Card>
+        </Animated.View>
       </View>
+    );
+  };
 
-      <Text style={styles.messageContent}>{item.content}</Text>
-    </Card>
+  // Render message item
+  const renderMessageItem = ({ item }) => (
+    <SwipeableMessageCard item={item} />
   );
 
   // Render empty state
@@ -157,13 +238,21 @@ const MessageViewScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {isGuest ? 'Public Messages' : 'Messages'}
-        </Text>
-        <Text style={styles.headerSubtitle}>
-          {eventName} • {filteredMessages.length} message{filteredMessages.length !== 1 ? 's' : ''}
-          {isGuest ? ' from other attendees' : ''}
-        </Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>
+            {isGuest ? 'Public Messages' : 'Event Whispers'}
+          </Text>
+          <Text style={styles.headerSubtitle}>
+            {eventName} • {filteredMessages.length} message{filteredMessages.length !== 1 ? 's' : ''}
+            {isGuest ? ' from attendees' : ''}
+          </Text>
+        </View>
+        {!loading && (
+          <View style={styles.liveIndicator}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>Live</Text>
+          </View>
+        )}
       </View>
 
       {/* Filter Controls - only show for hosts */}
@@ -230,14 +319,20 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
@@ -245,12 +340,31 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
   },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.success,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.textOnPrimary,
+    marginRight: spacing.xs,
+  },
+  liveText: {
+    fontSize: fontSize.xs,
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   filterContainer: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   filterButtons: {
     flexDirection: 'row',
@@ -267,14 +381,40 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
+  swipeContainer: {
+    marginBottom: spacing.lg,
+    position: 'relative',
+  },
+  deleteBackground: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.md,
+  },
+  deleteBackgroundText: {
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.bold,
+    fontSize: fontSize.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  messageCardContainer: {
+    backgroundColor: colors.background,
+  },
   messageCard: {
-    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   messageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   messageInfo: {
     flex: 1,
@@ -282,33 +422,61 @@ const styles = StyleSheet.create({
   messageMetadata: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
+  },
+  timestampContainer: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
   },
   messageTime: {
     fontSize: fontSize.xs,
-    color: colors.textLight,
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   visibilityBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
   },
+  publicBadge: {
+    backgroundColor: colors.primary,
+  },
+  privateBadge: {
+    backgroundColor: colors.error,
+  },
   visibilityText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
+    fontWeight: fontWeight.semibold,
+    color: colors.textOnPrimary,
   },
-  deleteButton: {
-    padding: spacing.sm,
-    marginTop: -spacing.sm,
-    marginRight: -spacing.sm,
-  },
-  deleteButtonText: {
-    fontSize: 16,
+
+  messageContentContainer: {
+    paddingLeft: spacing.xs,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   messageContent: {
     fontSize: fontSize.md,
     color: colors.textPrimary,
-    lineHeight: 22,
+    lineHeight: 24,
+    letterSpacing: 0.2,
+  },
+  guestIndicator: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  guestIndicatorText: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+    fontStyle: 'italic',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   emptyState: {
     alignItems: 'center',

@@ -183,7 +183,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
             ]}>
               <Text style={[
                 styles.statusText,
-                { color: event.isActive ? colors.textPrimary : colors.textOnPrimary }
+                { color: event.isActive ? colors.textOnPrimary : colors.textOnPrimary }
               ]}>
                 {event.isActive ? 'Active' : 'Inactive'}
               </Text>
@@ -195,15 +195,15 @@ const EventDetailsScreen = ({ navigation, route }) => {
           )}
 
           {event.location && (
-            <Text style={styles.eventLocation}>📍 {event.location}</Text>
+            <Text style={styles.eventLocation}>at {event.location}</Text>
           )}
 
           <View style={styles.eventMeta}>
             <Text style={styles.eventDate}>
-              Created: {formatDate(event.createdAt)}
+              Created {formatDate(event.createdAt)}
             </Text>
             <Text style={styles.eventPrivacy}>
-              {event.allowPublicMessages ? '📢 Public messages allowed' : '🔒 Private messages only'}
+              {event.allowPublicMessages ? 'Public messages allowed' : 'Private messages only'}
             </Text>
           </View>
         </Card>
@@ -409,6 +409,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
+    letterSpacing: 0.5,
   },
   eventDescription: {
     fontSize: fontSize.md,

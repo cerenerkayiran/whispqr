@@ -47,8 +47,6 @@ const GuestMessageScreen = ({ navigation, route }) => {
       return false;
     }
 
-
-
     return true;
   };
 
@@ -202,7 +200,7 @@ const GuestMessageScreen = ({ navigation, route }) => {
               <Text style={styles.eventDescription}>{event.description}</Text>
             )}
             {event.location && (
-              <Text style={styles.eventLocation}>📍 {event.location}</Text>
+              <Text style={styles.eventLocation}>at {event.location}</Text>
             )}
             <Text style={styles.eventHost}>
               Hosted by {event.hostName || 'Unknown'}
@@ -220,7 +218,6 @@ const GuestMessageScreen = ({ navigation, route }) => {
               </View>
             )}
 
-            {/* Anonymous Name (Optional) */}
             {/* Message Content */}
             <Input
               label="Your Message *"
@@ -268,7 +265,7 @@ const GuestMessageScreen = ({ navigation, route }) => {
             ) : (
               <View style={styles.privacyNotice}>
                 <Text style={styles.privacyNoticeText}>
-                  🔒 This event accepts private messages only. Your message will only be visible to the host.
+                  Shh… private delivery. This one’s just between you and the host.
                 </Text>
               </View>
             )}
@@ -284,16 +281,16 @@ const GuestMessageScreen = ({ navigation, route }) => {
               />
               
               {event?.allowPublicMessages && (
-                              <Button
-                title="View Messages"
-                variant="secondary"
-                onPress={() => navigation.navigate('MessageView', { 
-                  eventId: eventId, 
-                  eventName: event.name,
-                  isGuest: true 
-                })}
-                style={styles.viewMessagesButton}
-              />
+                <Button
+                  title="View Messages"
+                  variant="secondary"
+                  onPress={() => navigation.navigate('MessageView', { 
+                    eventId: eventId, 
+                    eventName: event.name,
+                    isGuest: true 
+                  })}
+                  style={styles.viewMessagesButton}
+                />
               )}
             </View>
 

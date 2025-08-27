@@ -1,8 +1,8 @@
 // Host Dashboard Screen - Main screen for authenticated hosts
 // Shows list of events, provides navigation to create new events, and user management
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, RefreshControl, TouchableOpacity, Alert, Image } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, RefreshControl, TouchableOpacity, Alert, Image, Animated, PanResponder } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useEvents } from '../hooks/useFirestore';
 import Button from '../components/Button';
@@ -59,16 +59,23 @@ const HostDashboardScreen = ({ navigation }) => {
       shadowType="md"
     >
       <View style={styles.eventHeader}>
-        <Text style={styles.eventTitle} numberOfLines={2}>
-          {item.name || 'Unnamed Event'}
-        </Text>
+        <View style={styles.eventTitleContainer}>
+          <Text style={styles.eventTitle} numberOfLines={2}>
+            {item.name || 'Unnamed Event'}
+          </Text>
+          {item.location && (
+            <Text style={styles.eventLocation} numberOfLines={1}>
+              at {item.location}
+            </Text>
+          )}
+        </View>
         <View style={[
           styles.statusBadge,
           { backgroundColor: item.isActive ? colors.success : colors.textLight }
         ]}>
           <Text style={[
             styles.statusText,
-            { color: item.isActive ? colors.textPrimary : colors.textOnPrimary }
+            { color: item.isActive ? colors.textOnPrimary : colors.textOnPrimary }
           ]}>
             {item.isActive ? 'Active' : 'Inactive'}
           </Text>
@@ -76,25 +83,20 @@ const HostDashboardScreen = ({ navigation }) => {
       </View>
 
       {item.description && (
-        <Text style={styles.eventDescription} numberOfLines={3}>
+        <Text style={styles.eventDescription} numberOfLines={2}>
           {item.description}
         </Text>
       )}
 
-      <View style={styles.eventFooter}>
-        <Text style={styles.eventDate}>
-          Created: {formatDate(item.createdAt)}
-        </Text>
-        <TouchableOpacity
-          style={styles.viewMessagesButton}
-          onPress={() => navigation.navigate('MessageView', { 
-            eventId: item.id, 
-            eventName: item.name 
-          })}
-        >
-          <Text style={styles.viewMessagesText}>View Messages</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('MessageView', { 
+          eventId: item.id, 
+          eventName: item.name 
+        })}
+        style={styles.messageCountContainer}
+      >
+        <Text style={styles.messageCount}>View Messages</Text>
+      </TouchableOpacity>
     </Card>
   );
 
@@ -132,48 +134,106 @@ const HostDashboardScreen = ({ navigation }) => {
     );
   };
 
+  // Swipeable Expired Event Card Component
+  const SwipeableExpiredEventCard = ({ item }) => {
+    const translateX = useRef(new Animated.Value(0)).current;
+    const opacity = useRef(new Animated.Value(1)).current;
+
+    const panResponder = useRef(
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (evt, gestureState) => {
+          return Math.abs(gestureState.dx) > 20;
+        },
+        onPanResponderMove: (evt, gestureState) => {
+          if (gestureState.dx < 0) {
+            translateX.setValue(gestureState.dx);
+          }
+        },
+        onPanResponderRelease: (evt, gestureState) => {
+          if (gestureState.dx < -100) {
+            // Swipe far enough - delete with confirmation
+            Animated.parallel([
+              Animated.timing(translateX, {
+                toValue: -400,
+                duration: 300,
+                useNativeDriver: true,
+              }),
+              Animated.timing(opacity, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+              })
+            ]).start(() => {
+              handleDeleteEvent(item.id, item.name || 'Unnamed Event');
+            });
+          } else {
+            // Snap back
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: true,
+            }).start();
+          }
+        },
+      })
+    ).current;
+
+    return (
+      <View style={styles.swipeContainer}>
+        <View style={styles.deleteBackground}>
+          <Text style={styles.deleteBackgroundText}>Delete</Text>
+        </View>
+        <Animated.View
+          style={[
+            styles.expiredEventCardContainer,
+            {
+              transform: [{ translateX }],
+              opacity,
+            },
+          ]}
+          {...panResponder.panHandlers}
+        >
+          <Card style={[styles.eventCard, styles.expiredEventCard]} shadowType="sm">
+            <View style={styles.eventHeader}>
+              <View style={styles.eventTitleContainer}>
+                <Text style={[styles.eventTitle, styles.expiredEventTitle]} numberOfLines={2}>
+                  {item.name || 'Unnamed Event'}
+                </Text>
+                {item.location && (
+                  <Text style={[styles.eventLocation, styles.expiredEventLocation]} numberOfLines={1}>
+                    at {item.location}
+                  </Text>
+                )}
+              </View>
+              <View style={[styles.statusBadge, styles.expiredStatusBadge]}>
+                <Text style={[styles.statusText, styles.expiredStatusText]}>
+                  Expired
+                </Text>
+              </View>
+            </View>
+
+            {item.description && (
+              <Text style={[styles.eventDescription, styles.expiredEventDescription]} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate('MessageView', { 
+                eventId: item.id, 
+                eventName: item.name 
+              })}
+              style={styles.messageCountContainer}
+            >
+              <Text style={[styles.messageCount, styles.expiredMessageCount]}>View Messages</Text>
+            </TouchableOpacity>
+          </Card>
+        </Animated.View>
+      </View>
+    );
+  };
+
   const renderExpiredEventItem = ({ item }) => (
-    <Card style={[styles.eventCard, styles.expiredEventCard]} shadowType="sm">
-      <View style={styles.eventHeader}>
-        <Text style={[styles.eventTitle, styles.expiredEventTitle]} numberOfLines={2}>
-          {item.name || 'Unnamed Event'}
-        </Text>
-        <View style={[styles.statusBadge, styles.expiredStatusBadge]}>
-          <Text style={[styles.statusText, styles.expiredStatusText]}>
-            Expired
-          </Text>
-        </View>
-      </View>
-
-      {item.description && (
-        <Text style={[styles.eventDescription, styles.expiredEventDescription]} numberOfLines={3}>
-          {item.description}
-        </Text>
-      )}
-
-      <View style={styles.eventFooter}>
-        <Text style={[styles.eventDate, styles.expiredEventDate]}>
-          Created: {formatDate(item.createdAt)}
-        </Text>
-        <View style={styles.expiredEventActions}>
-          <TouchableOpacity
-            style={[styles.viewMessagesButton, styles.expiredViewMessagesButton]}
-            onPress={() => navigation.navigate('MessageView', { 
-              eventId: item.id, 
-              eventName: item.name 
-            })}
-          >
-            <Text style={[styles.viewMessagesText, styles.expiredViewMessagesText]}>View Messages</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.deleteButton]}
-            onPress={() => handleDeleteEvent(item.id, item.name || 'Unnamed Event')}
-          >
-            <Text style={styles.deleteButtonText}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Card>
+    <SwipeableExpiredEventCard item={item} />
   );
 
   // Render empty state
@@ -355,7 +415,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 50, // Reduced height to not cover the content
+    height: 50,
     backgroundColor: colors.surface,
     zIndex: -1,
   },
@@ -370,8 +430,8 @@ const styles = StyleSheet.create({
   // Hero Section Styles
   heroSection: {
     backgroundColor: colors.surface,
-    paddingTop: 100, // Even more padding to push content down further
-    paddingBottom: spacing.sm, // Reduced from spacing.lg to spacing.md
+    paddingTop: 100,
+    paddingBottom: spacing.sm, 
     paddingHorizontal: spacing.lg,
     borderBottomLeftRadius: borderRadius.xl,
     borderBottomRightRadius: borderRadius.xl,
@@ -389,7 +449,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden', // Ensures image stays within circular bounds
+    overflow: 'hidden', 
   },
   profileImage: {
     width: 40,
@@ -405,13 +465,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   welcomeTitle: {
-    fontSize: 36, // Increased from fontSize.xxxl (32px) to 36px
+    fontSize: 36, 
     fontWeight: fontWeight.light,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
   userName: {
-    fontSize: 36, // Increased from fontSize.xxxl (32px) to 36px
+    fontSize: 36,
     fontWeight: fontWeight.bold,
     color: colors.primary,
     marginBottom: spacing.md,
@@ -423,8 +483,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   typewriterContainer: {
-    height: 80, // Increased height for more spacing
-    justifyContent: 'center', // Center the text vertically in the larger container
+    height: 80, 
+    justifyContent: 'center', 
     alignItems: 'flex-start',
   },
   
@@ -478,21 +538,32 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: spacing.sm,
   },
-  eventTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
+  eventTitleContainer: {
     flex: 1,
     marginRight: spacing.sm,
+  },
+  eventTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+    lineHeight: 22,
+  },
+  eventLocation: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
   statusBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
+    alignSelf: 'flex-start',
   },
   statusText: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
+    letterSpacing: 0.5,
   },
   eventDescription: {
     fontSize: fontSize.sm,
@@ -500,20 +571,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: spacing.md,
   },
-  eventFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  eventDate: {
-    fontSize: fontSize.xs,
-    color: colors.textLight,
-  },
-  viewMessagesButton: {
-    paddingHorizontal: spacing.sm,
+  messageCountContainer: {
+    alignSelf: 'flex-start',
     paddingVertical: spacing.xs,
   },
-  viewMessagesText: {
+  messageCount: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     color: colors.primary,
@@ -592,19 +654,41 @@ const styles = StyleSheet.create({
   expiredEventDescription: {
     color: colors.textSecondary,
   },
-  expiredEventDate: {
+  expiredEventLocation: {
     color: colors.textLight,
   },
-  expiredViewMessagesButton: {
-    backgroundColor: colors.border,
-  },
-  expiredViewMessagesText: {
+  expiredMessageCount: {
     color: colors.textSecondary,
   },
-  expiredEventActions: {
+  expiredEventFooter: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.sm,
+  },
+  swipeContainer: {
+    marginBottom: spacing.md,
+    position: 'relative',
+  },
+  expiredEventCardContainer: {
+    backgroundColor: colors.background,
+  },
+  deleteBackground: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.md,
+  },
+  deleteBackgroundText: {
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.bold,
+    fontSize: fontSize.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   deleteButton: {
     paddingHorizontal: spacing.sm,
