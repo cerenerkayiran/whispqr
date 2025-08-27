@@ -9,6 +9,7 @@ import { generateStringCode } from '../utils/qrCode';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../utils/theme';
+import { captureRef } from 'react-native-view-shot';
 
 const EventDetailsScreen = ({ navigation, route }) => {
   const { eventId } = route.params;
@@ -17,6 +18,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
   const { deleteEvent } = useEvents(user?.uid);
   const [qrError, setQrError] = React.useState(false);
   const [qrRef, setQrRef] = React.useState(null);
+  const qrContainerRef = React.useRef();
 
   // Format date for display
   const formatDate = (timestamp) => {
@@ -37,48 +39,23 @@ const EventDetailsScreen = ({ navigation, route }) => {
 
   // Share QR code as image
   const shareQRCode = async () => {
-    if (qrRef) {
-      try {
-        qrRef.toDataURL(async (dataURL) => {
-          try {
-            // Create a temporary file for the QR code image
-            const filename = `${event?.name || 'Event'}_QR.png`;
-            const fileUri = `${FileSystem.documentDirectory}${filename}`;
-            
-            // Write the base64 data to a file
-            await FileSystem.writeAsStringAsync(fileUri, dataURL, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-            
-            // Share the file
-            const shareOptions = {
-              title: `Join "${event?.name || 'Event'}" on whispqr`,
-              message: `Scan this QR code to join "${event?.name || 'Event'}" and leave anonymous messages!\n\nOr use code: ${generateStringCode(eventId)}`,
-              url: fileUri,
-            };
-            
-            await Share.share(shareOptions);
-            
-            // Clean up the temporary file after sharing
-            setTimeout(async () => {
-              try {
-                await FileSystem.deleteAsync(fileUri, { idempotent: true });
-              } catch (cleanupError) {
-                console.log('Cleanup error:', cleanupError);
-              }
-            }, 10000); // Clean up after 10 seconds
-            
-          } catch (fileError) {
-            console.error('File sharing error:', fileError);
-            // Fallback to text sharing
-            shareTextOnly();
-          }
-        });
-      } catch (error) {
-        console.error('QR generation error:', error);
-        shareTextOnly();
-      }
-    } else {
+    try {
+      // Capture the QR code container as an image
+      const uri = await captureRef(qrContainerRef, {
+        format: 'png',
+        quality: 1.0,
+      });
+      
+      const shareOptions = {
+        title: `Join "${event?.name || 'Event'}" on whispqr`,
+        message: `Scan this QR code to join "${event?.name || 'Event'}" and leave anonymous messages!\n\nOr use code: ${generateStringCode(eventId)}`,
+        url: uri,
+      };
+      
+      await Share.share(shareOptions);
+    } catch (error) {
+      console.error('QR sharing error:', error);
+      // Fallback to text sharing
       shareTextOnly();
     }
   };
@@ -238,10 +215,13 @@ const EventDetailsScreen = ({ navigation, route }) => {
                   </Text>
                 </View>
               ) : eventId ? (
-                <View style={{
-                  backgroundColor: 'white',
-                  padding: spacing.md,
-                }}>
+                <View 
+                  ref={qrContainerRef}
+                  style={{
+                    backgroundColor: 'white',
+                    padding: spacing.md,
+                  }}
+                >
                   <QRCode
                     value={generateStringCode(eventId)}
                     size={200}
@@ -258,11 +238,10 @@ const EventDetailsScreen = ({ navigation, route }) => {
                 <Text>Loading QR code...</Text>
               )}
             </View>
-            <Text style={styles.qrCodeLabel}>QR Code</Text>
           </View>
 
           {/* Share Button - matching View Messages button structure */}
-          <Card style={styles.actionsSection}>
+          <Card style={[styles.actionsSection, { marginTop: -spacing.xl }]}>
             <View style={styles.actionButtons}>
               <Button
                 title="Share QR Code"
