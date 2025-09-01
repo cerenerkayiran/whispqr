@@ -2,6 +2,9 @@
 
 A React Native app that lets hosts create events and collect anonymous messages via QR codes. WhispQR enables meaningful connections without the pressure of public identity-featuring a modern, mobile-friendly design with custom illustrations created by me.
 
+## Watch Demo
+https://drive.google.com/file/d/1YAdChkWexUwcJa0TbLnzR7ij_IO5hPQq/view?usp=sharing
+
 ## What It Does
 
 whispqr creates a safe space for anonymous feedback and messages at events. Hosts create an event, share a QR code, and guests can leave messages without creating accounts or revealing their identity. Think anonymous suggestion box, but modern and mobile.
